@@ -8,7 +8,8 @@ When you open the extension popup on a recipe page, it:
 
 1. Looks for a `schema.org/Recipe` JSON-LD block in the current page.
 2. Extracts the recipe name, ingredients, instructions, and image.
-3. Offers two actions:
+3. Asks the native host for the current subfolders under `Cuisine` in the Obsidian vault.
+4. Offers two actions:
    - **Obsidian**: creates a new note through an `obsidian://new` URL.
    - **Bring!**: asks Bring! to generate a recipe deeplink, then opens it so Bring! can import addable ingredients.
 
@@ -31,6 +32,7 @@ The native host is a small Python script:
 
 - `bring_native_host.py` reads one native-messaging request from stdin.
 - It sends a POST request to `https://api.getbring.com/rest/bringrecipes/deeplink`.
+- It lists Obsidian subfolders under the configured recipe directory.
 - It returns the generated deeplink to the extension.
 
 The shell wrapper `bring_native_host.sh` launches the Python script and writes diagnostics to `/tmp/com.manu.bringimport.stderr.log`.
@@ -158,12 +160,38 @@ Also verify:
 
 ## Obsidian Notes
 
-The Obsidian action uses an `obsidian://new` URL. The current settings are at the top of `popup.js`:
+The Obsidian action uses an `obsidian://new` URL. The current vault and recipe folder settings are at the top of `popup.js`:
 
 ```js
 const VAULT = "Manu's vault";
 const CUISINE_DIR = 'Cuisine';
-const SUBFOLDERS = ['Cocktails', 'Desserts', 'Plats', 'Recettes de la Nonna', 'Sauces', 'Techniques'];
 ```
 
-Adjust these values if the vault or folder layout changes.
+The popup asks the native host for the current subfolders inside:
+
+```text
+<vault>/Cuisine/
+```
+
+If the native host cannot read the vault, the popup falls back to a small built-in list so the extension remains usable.
+
+By default, the host looks for the vault in common macOS locations, including:
+
+```text
+~/Documents/Manu's vault
+~/Library/Mobile Documents/iCloud~md~obsidian/Documents/Manu's vault
+~/Library/Mobile Documents/com~apple~CloudDocs/Manu's vault
+~/Library/CloudStorage/Dropbox/Manu's vault
+```
+
+If the vault lives somewhere else, set `OBSIDIAN_VAULT_PATH` in `bring_native_host.sh` before reinstalling the native host. Example:
+
+```sh
+export OBSIDIAN_VAULT_PATH="$HOME/Somewhere/Manu's vault"
+```
+
+Then rerun:
+
+```sh
+./install_native_host.sh YOUR_EXTENSION_ID
+```

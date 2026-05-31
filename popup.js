@@ -1,6 +1,6 @@
 const VAULT = "Manu's vault";
 const CUISINE_DIR = 'Cuisine';
-const SUBFOLDERS = ['Cocktails', 'Desserts', 'Plats', 'Recettes de la Nonna', 'Sauces', 'Techniques'];
+const FALLBACK_SUBFOLDERS = ['Cocktails', 'Desserts', 'Plats', 'Recettes de la Nonna', 'Sauces', 'Techniques'];
 const URI_LIMIT = 50_000;
 
 // Injected into the page to extract schema.org/Recipe JSON-LD from the DOM.
@@ -91,10 +91,24 @@ function setStatus(msg, type = '') {
 }
 
 async function getBringDeeplinkWithNativeHost(url) {
+  const resp = await sendNativeMessage({ action: 'bringDeeplink', url });
+  return resp.deeplink;
+}
+
+async function listObsidianFoldersWithNativeHost() {
+  const resp = await sendNativeMessage({
+    action: 'listObsidianFolders',
+    vaultName: VAULT,
+    baseDir: CUISINE_DIR,
+  });
+  return resp.folders;
+}
+
+async function sendNativeMessage(message) {
   return new Promise((resolve, reject) => {
     chrome.runtime.sendNativeMessage(
       'com.manu.bringimport',
-      { url },
+      message,
       (resp) => {
         if (chrome.runtime.lastError) {
           reject(new Error(`Native host: ${chrome.runtime.lastError.message}`));
@@ -108,7 +122,7 @@ async function getBringDeeplinkWithNativeHost(url) {
           reject(new Error(`Native host: ${resp.error}`));
           return;
         }
-        resolve(resp.deeplink);
+        resolve(resp);
       }
     );
   });
@@ -156,7 +170,17 @@ async function getBringDeeplinkWithFetch(url) {
   document.getElementById('recipe-name').title = name;
 
   const select = document.getElementById('subfolder');
-  for (const folder of SUBFOLDERS) {
+  let folders = FALLBACK_SUBFOLDERS;
+  try {
+    const nativeFolders = await listObsidianFoldersWithNativeHost();
+    if (Array.isArray(nativeFolders) && nativeFolders.length) {
+      folders = nativeFolders;
+    }
+  } catch (err) {
+    console.warn(err);
+  }
+
+  for (const folder of folders) {
     const opt = document.createElement('option');
     opt.value = folder;
     opt.textContent = folder;
