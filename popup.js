@@ -30,7 +30,25 @@ function extractRecipeFromPage() {
 }
 
 function stripHtml(s) {
-  return (s || '').replace(/<[^>]+>/g, '').trim();
+  return decodeHtmlEntities(s || '').replace(/<[^>]+>/g, '').trim();
+}
+
+function decodeHtmlEntities(s) {
+  // Use the browser's HTML parser as an entity decoder instead of maintaining
+  // our own entity table. A textarea exposes decoded text through .value.
+  const textarea = document.createElement('textarea');
+  let decoded = s;
+
+  // Some recipe sites double-encode JSON-LD text:
+  // "d&amp;eacute;s" -> "d&eacute;s" -> "dés".
+  for (let i = 0; i < 3; i += 1) {
+    textarea.innerHTML = decoded;
+    const next = textarea.value;
+    if (next === decoded) break;
+    decoded = next;
+  }
+
+  return decoded;
 }
 
 function safeFilename(s) {
