@@ -1,0 +1,9 @@
+{
+  "name": "com.manu.bringimport",
+  "description": "Bring! recipe deeplink generator for Recipe Importer extension",
+  "path": "HOST_PATH_PLACEHOLDER",
+  "type": "stdio",
+  "allowed_extensions": [
+    "recipe-importer@manu"
+  ]
+}
